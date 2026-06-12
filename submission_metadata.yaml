@@ -1,0 +1,77 @@
+# Redrob Hackathon — Submission Metadata
+# India Runs Data & AI Challenge | Senior AI Engineer Role
+
+# ============================================================================
+# Team identity
+# ============================================================================
+team_name: "YOUR_TEAM_NAME"
+
+primary_contact:
+  name: "Your Full Name"
+  email: "your_email@example.com"
+  phone: "+91-XXXXXXXXXX"
+
+team_members:
+  - name: "Your Full Name"
+    email: "your_email@example.com"
+    role: "ML Engineer"
+
+# ============================================================================
+# Code and reproducibility
+# ============================================================================
+github_repo: "https://github.com/YOUR_USERNAME/redrob-ranker"
+
+sandbox_link: "https://your-sandbox-url.streamlit.app"
+
+reproduce_command: "python rank.py --candidates ./candidates.jsonl --out ./submission.csv"
+
+# ============================================================================
+# Compute environment
+# ============================================================================
+compute:
+  platform: "Local Windows"
+  cpu_cores: 8
+  ram_gb: 16
+  python_version: "3.11"
+  os: "Windows 11"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: true
+  pre_computation_time_minutes: 15
+
+# ============================================================================
+# AI tools declaration
+# ============================================================================
+ai_tools_used:
+  - "Claude"
+  - "GitHub Copilot"
+
+ai_usage_summary: |
+  Used Claude for architecture discussion, code review, and debugging.
+  Used GitHub Copilot for autocomplete. No candidate data was fed to any LLM.
+
+# ============================================================================
+# Approach summary
+# ============================================================================
+methodology_summary: |
+  Rule-based multi-signal ranker with explicit reasoning capture. Five scoring
+  components (skills coherence, career quality, experience fit, behavioral
+  engagement, education tier) combined with weighted aggregation and a
+  multiplicative bias-mitigation layer. The skills component cross-validates
+  claimed skills against career description evidence to defeat keyword stuffers.
+  Career scoring detects production deployment signals vs research-only
+  backgrounds. Behavioral scoring converts Redrob platform engagement (recency,
+  response rate, notice period) into an availability multiplier. Honeypot
+  detection uses logical consistency checks (impossible timelines, zero-duration
+  experts, overlapping jobs). Education is deliberately compressed to ≤5% weight
+  for fairness. Runtime is ~3 minutes for 100K candidates on CPU with no network.
+
+# ============================================================================
+# Declarations
+# ============================================================================
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true
