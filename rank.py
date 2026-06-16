@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """
-Redrob AI Candidate Ranker
+Redrob AI Candidate Ranker — v2 (Enhanced)
 Usage: python rank.py --candidates ./candidates.jsonl --out ./submission.csv
 
-Constraints: ≤5 min, ≤16 GB RAM, CPU only, no network calls.
-Strategy: Pre-computed features (from ingest.py) loaded from local parquet.
-          If parquet not found, falls back to direct scoring (slower but works).
+Constraints: <=5 min, <=16 GB RAM, CPU only, no network calls.
+
+v2 enhancements over v1:
+  - TF-IDF cosine similarity with JD text (captures semantic overlap)
+  - Skill credibility scoring (endorsements vs duration vs proficiency)
+  - AI/ML specialization score (specialist vs generalist)
+  - Career trajectory analysis (upward mobility + ML pivot detection)
+  - Salary budget alignment
+  - Re-optimized weight distribution for NDCG@10
 """
 
 import argparse
@@ -19,7 +25,7 @@ from pathlib import Path
 
 import pandas as pd
 
-# Our scoring modules
+# ── Original scoring modules ────────────────────────────────────────────────
 from scoring.jd_config import CORE_SKILLS
 from scoring.skills_scorer import compute_skills_score, compute_assessment_bonus
 from scoring.career_scorer import compute_career_score
@@ -27,6 +33,15 @@ from scoring.behavioral_scorer import compute_behavioral_score
 from scoring.honeypot_detector import is_honeypot
 from scoring.bias_mitigator import compute_education_score, apply_bias_checks
 from scoring.reasoning_generator import generate_reasoning
+
+# ── NEW v2 scoring modules ──────────────────────────────────────────────────
+from scoring.tfidf_scorer import compute_tfidf_score
+from scoring.advanced_features import (
+    compute_skill_credibility,
+    compute_specialization_score,
+    compute_career_trajectory,
+    compute_salary_fit,
+)
 
 
 def experience_score(yoe: float) -> float:
@@ -57,19 +72,30 @@ def score_candidate(candidate: dict) -> tuple[float, dict]:
     """
     Returns (final_score, score_breakdown).
     
-    Score weights are calibrated to NDCG@10 (50% of eval metric),
-    meaning top picks need to be very precise.
-    
-    Final = skills(35%) + career(25%) + experience(15%) + behavioral(15%)
-          + education(5%) + assessment_bonus(up to 8%)
-          - negative_signals
+    v2 weight distribution (optimized for NDCG@10):
+    ─────────────────────────────────────────────────────
+    Signal              Weight    Rationale
+    ─────────────────────────────────────────────────────
+    skills              0.28      Core JD match (slightly reduced to make room)
+    tfidf               0.10      Semantic text overlap with JD
+    career              0.18      Career quality + production ML evidence
+    experience          0.10      Years of experience fit
+    behavioral          0.10      Availability + engagement signals
+    specialization      0.07      AI/ML specialist vs generalist
+    credibility         0.05      Skill claim believability
+    trajectory          0.04      Career progression toward AI
+    salary_fit          0.03      Budget alignment
+    education           max 0.03  Tier bonus (compressed)
+    assessment          max 0.05  Redrob platform test scores
+    ─────────────────────────────────────────────────────
+    Total               ~1.03     (clamped to 1.0)
     """
     # ── Honeypot detection ───────────────────────────────────────────────────
     is_trap, trap_reasons = is_honeypot(candidate)
     if is_trap:
         return 0.0, {"honeypot": True, "reasons": trap_reasons}
     
-    # ── Component scores ─────────────────────────────────────────────────────
+    # ── Original component scores ────────────────────────────────────────────
     skills = compute_skills_score(candidate)
     career = compute_career_score(candidate)
     yoe = experience_score(candidate["profile"]["years_of_experience"])
@@ -77,25 +103,46 @@ def score_candidate(candidate: dict) -> tuple[float, dict]:
     education = compute_education_score(candidate)
     assessment_bonus = compute_assessment_bonus(candidate)
     
-    # ── Weighted combination ──────────────────────────────────────────────────
+    # ── NEW v2 component scores ──────────────────────────────────────────────
+    tfidf = compute_tfidf_score(candidate)
+    credibility = compute_skill_credibility(candidate)
+    specialization = compute_specialization_score(candidate)
+    trajectory = compute_career_trajectory(candidate)
+    salary = compute_salary_fit(candidate)
+    
+    # ── Weighted combination (v2 optimized) ──────────────────────────────────
+    # Education and assessment are already pre-scaled (max 0.03 and 0.05)
+    education_scaled = min(0.03, education * 0.6)  # compress from max 0.05 to 0.03
+    assessment_scaled = min(0.05, assessment_bonus * 0.625)  # compress from max 0.08 to 0.05
+    
     raw = (
-        skills    * 0.35 +
-        career    * 0.25 +
-        yoe       * 0.15 +
-        behavioral * 0.15 +
-        education +          # max 0.05
-        assessment_bonus     # max 0.08
+        skills         * 0.28 +
+        tfidf          * 0.10 +
+        career         * 0.18 +
+        yoe            * 0.10 +
+        behavioral     * 0.10 +
+        specialization * 0.07 +
+        credibility    * 0.05 +
+        trajectory     * 0.04 +
+        salary         * 0.03 +
+        education_scaled +
+        assessment_scaled
     )
     
     final = apply_bias_checks(candidate, raw)
     
     breakdown = {
         "skills": round(skills, 3),
+        "tfidf": round(tfidf, 3),
         "career": round(career, 3),
         "experience": round(yoe, 3),
         "behavioral": round(behavioral, 3),
-        "education": round(education, 3),
-        "assessment_bonus": round(assessment_bonus, 3),
+        "specialization": round(specialization, 3),
+        "credibility": round(credibility, 3),
+        "trajectory": round(trajectory, 3),
+        "salary_fit": round(salary, 3),
+        "education": round(education_scaled, 3),
+        "assessment_bonus": round(assessment_scaled, 3),
         "final": round(final, 3),
     }
     
@@ -110,7 +157,7 @@ def main():
     args = parser.parse_args()
     
     start_time = time.time()
-    print(f"[{time.strftime('%H:%M:%S')}] Starting Redrob AI Ranker...")
+    print(f"[{time.strftime('%H:%M:%S')}] Starting Redrob AI Ranker v2 (Enhanced)...")
     
     candidates_path = Path(args.candidates)
     if not candidates_path.exists():
@@ -138,7 +185,7 @@ def main():
     print(f"[{time.strftime('%H:%M:%S')}] Loaded {len(candidates):,} candidates")
     
     # ── Score all candidates ──────────────────────────────────────────────────
-    print(f"[{time.strftime('%H:%M:%S')}] Scoring candidates...")
+    print(f"[{time.strftime('%H:%M:%S')}] Scoring candidates (v2 enhanced pipeline)...")
     
     results = []
     honeypot_count = 0
