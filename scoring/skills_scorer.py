@@ -1,8 +1,9 @@
 # scoring/skills_scorer.py
 import re
+from datetime import datetime
 from scoring.jd_config import (
     CORE_SKILLS, MAX_SKILLS_SCORE, BAD_TITLE_PATTERNS,
-    BAD_TITLE_EXACT_WORDS, EXACT_MATCH_SKILLS
+    BAD_TITLE_EXACT_WORDS, EXACT_MATCH_SKILLS, SKILL_SYNONYMS
 )
 
 
@@ -37,14 +38,34 @@ def compute_skills_score(candidate: dict) -> float:
     if not skills:
         return 0.0
     
+    current_year = datetime.now().year
+    
     # Build a lowercase lookup of candidate skills with metadata
     skill_map = {}
     for s in skills:
         name_lower = s["name"].lower()
+        
+        # Skill recency multiplier
+        recency_mult = 1.0
+        last_used = s.get("last_used_date")
+        if last_used:
+            try:
+                # Assuming format like "2023-05-01" or "2023"
+                if isinstance(last_used, str) and len(last_used) >= 4:
+                    year = int(last_used[:4])
+                    age = current_year - year
+                    if age >= 4:
+                        recency_mult = 0.6
+                    elif age >= 2:
+                        recency_mult = 0.8
+            except ValueError:
+                pass
+        
         skill_map[name_lower] = {
             "proficiency": s.get("proficiency", "beginner"),
             "endorsements": s.get("endorsements", 0),
-            "duration_months": s.get("duration_months", 0)
+            "duration_months": s.get("duration_months", 0),
+            "recency_mult": recency_mult
         }
     
     # All career text (titles + descriptions)
@@ -91,22 +112,34 @@ def compute_skills_score(candidate: dict) -> float:
     }
     
     for jd_skill, weight in CORE_SKILLS.items():
-        # Skip if we already matched a synonym of this skill
-        # (e.g., "embedding" and "embeddings" shouldn't double-count)
-        
-        # Direct match in skills list
+        if jd_skill in matched_jd_skills:
+            continue
+            
+        synonyms = [jd_skill]
+        if jd_skill in SKILL_SYNONYMS:
+            synonyms.extend(SKILL_SYNONYMS[jd_skill])
+            
         matched_skill = None
-        for skill_name in skill_map:
-            if jd_skill in EXACT_MATCH_SKILLS:
-                # Use word-boundary matching for short/ambiguous JD skills
-                if _word_boundary_match(jd_skill, skill_name):
-                    matched_skill = skill_map[skill_name]
-                    break
-            else:
-                # Safe substring matching for longer, unambiguous terms
-                if jd_skill in skill_name or skill_name in jd_skill:
-                    matched_skill = skill_map[skill_name]
-                    break
+        matched_synonym = jd_skill
+        
+        for syn in synonyms:
+            for skill_name in skill_map:
+                if syn in EXACT_MATCH_SKILLS or (jd_skill in EXACT_MATCH_SKILLS and syn == jd_skill):
+                    # Use word-boundary matching for short/ambiguous JD skills
+                    if _word_boundary_match(syn, skill_name):
+                        matched_skill = skill_map[skill_name]
+                        matched_synonym = syn
+                        break
+                else:
+                    # Safe substring matching for longer, unambiguous terms
+                    if syn in skill_name or skill_name in syn:
+                        matched_skill = skill_map[skill_name]
+                        matched_synonym = syn
+                        break
+            if matched_skill:
+                for s in synonyms:
+                    matched_jd_skills.add(s)
+                break
         
         if matched_skill:
             prof_mult = PROFICIENCY_MULT.get(matched_skill["proficiency"], 0.5)
@@ -115,20 +148,30 @@ def compute_skills_score(candidate: dict) -> float:
             duration = matched_skill["duration_months"]
             dur_mult = min(1.0, 0.4 + 0.6 * (duration / 18)) if duration > 0 else 0.3
             
+            # Recency scaling
+            recency_mult = matched_skill.get("recency_mult", 1.0)
+            
             # Career evidence check (critical for high-weight skills)
             evidence_mult = 1.0
             if weight >= 4.0:  # only scrutinize must-have skills
-                evidence_mult = 1.0 if has_career_evidence(jd_skill) else 0.5
+                evidence_mult = 1.0 if has_career_evidence(matched_synonym) else 0.5
             
-            raw_score += weight * prof_mult * dur_mult * evidence_mult
+            raw_score += weight * prof_mult * dur_mult * evidence_mult * recency_mult
         
-        elif jd_skill in EXACT_MATCH_SKILLS:
-            # For short skills, use word-boundary check in career text too
-            if _word_boundary_match(jd_skill, career_text):
-                raw_score += weight * 0.35
-        elif jd_skill in career_text:
-            # Mentioned in career but not listed in skills → partial credit
-            raw_score += weight * 0.35
+        else:
+            # Check career text for any of the synonyms
+            for syn in synonyms:
+                if syn in EXACT_MATCH_SKILLS or (jd_skill in EXACT_MATCH_SKILLS and syn == jd_skill):
+                    if _word_boundary_match(syn, career_text):
+                        raw_score += weight * 0.35
+                        for s in synonyms:
+                            matched_jd_skills.add(s)
+                        break
+                elif syn in career_text:
+                    raw_score += weight * 0.35
+                    for s in synonyms:
+                        matched_jd_skills.add(s)
+                    break
     
     # Apply title coherence penalty
     final = (raw_score / max(MAX_SKILLS_SCORE, 1.0)) * title_penalty

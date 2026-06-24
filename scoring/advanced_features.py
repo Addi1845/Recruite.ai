@@ -189,17 +189,20 @@ def compute_specialization_score(candidate: dict) -> float:
         ai_count = sum(1 for s in skills if _skill_is_ai_domain(s.get("name", "")))
 
         ratio = ai_count / total
+        depth_bonus = min(0.15, ai_count / 100)
 
         if ratio >= 0.70:
-            return 1.0
+            score = 1.0
         elif ratio >= 0.50:
             # Linear interpolation: 0.50→0.65, 0.70→1.0
-            return round(0.65 + (ratio - 0.50) / 0.20 * 0.35, 4)
+            score = 0.65 + (ratio - 0.50) / 0.20 * 0.35
         elif ratio >= 0.30:
             # Linear interpolation: 0.30→0.30, 0.50→0.65
-            return round(0.30 + (ratio - 0.30) / 0.20 * 0.35, 4)
+            score = 0.30 + (ratio - 0.30) / 0.20 * 0.35
         else:
-            return 0.3
+            score = 0.3
+
+        return round(min(1.0, score + depth_bonus), 4)
 
     except Exception:
         return 0.3

@@ -54,17 +54,18 @@ ai_usage_summary: |
 # Approach summary
 # ============================================================================
 methodology_summary: |
-  Rule-based multi-signal ranker with explicit reasoning capture. Five scoring
-  components (skills coherence, career quality, experience fit, behavioral
-  engagement, education tier) combined with weighted aggregation and a
-  multiplicative bias-mitigation layer. The skills component cross-validates
-  claimed skills against career description evidence to defeat keyword stuffers.
-  Career scoring detects production deployment signals vs research-only
-  backgrounds. Behavioral scoring converts Redrob platform engagement (recency,
-  response rate, notice period) into an availability multiplier. Honeypot
-  detection uses logical consistency checks (impossible timelines, zero-duration
-  experts, overlapping jobs). Education is deliberately compressed to ≤5% weight
-  for fairness. Runtime is ~3 minutes for 100K candidates on CPU with no network.
+  Rule-based multi-signal ranker (v3) with explicit reasoning capture. Incorporates 11 scoring
+  components (skills coherence, career quality, experience fit, behavioral engagement, TF-IDF semantic overlap,
+  skill credibility, specialization depth, career trajectory, salary fit, and education/assessment tier) 
+  combined with weighted aggregation and a multiplicative bias-mitigation layer. The skills component 
+  cross-validates claimed skills against career description evidence to defeat keyword stuffers, uses
+  a synonym map to catch industry-standard aliases (e.g. sbert), and applies recency decay for stale skills.
+  Career scoring detects production deployment signals, evaluates upward trajectories, checks for ML pivots,
+  and identifies leadership signals. Behavioral scoring converts Redrob platform engagement into a deterministic 
+  availability multiplier. Advanced honeypot detection uses Jaccard-similarity checks to catch copy-paste 
+  fraud, timeline impossibilities (like GPT-4 in 2019), zero-duration experts, and overlapping jobs 
+  (catching ~45% of the dataset as fake). Education is deliberately compressed to ≤5% weight for fairness. 
+  Runtime is ~9.5 minutes for 100K candidates on CPU with no network.
 
 # ============================================================================
 # Declarations

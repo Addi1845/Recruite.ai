@@ -64,6 +64,20 @@ EXACT_MATCH_SKILLS = {
     "peft", "lora", "qlora", "bm25", "ndcg", "faiss",
 }
 
+# Skill synonyms map aliases to canonical terms in CORE_SKILLS
+SKILL_SYNONYMS = {
+    "sentence-transformers": ["sentence-transformers", "sbert", "sentence transformers", "bi-encoder"],
+    "learning to rank": ["learning to rank", "ltr", "lambda rank", "lambdarank"],
+    "faiss": ["faiss", "facebook ai similarity search"],
+    "bge": ["bge", "bge-large", "bge-base", "bge-m3"],
+    "e5 embedding": ["e5", "e5-large", "e5-base", "e5 embedding"],
+    "hybrid search": ["hybrid search", "hybrid retrieval"],
+    "xgboost": ["xgboost", "xgb"],
+    "lightgbm": ["lightgbm", "lgbm"],
+    "ndcg": ["ndcg", "nDCG"],
+    "mrr": ["mrr", "mean reciprocal rank"],
+}
+
 # Companies that = automatic full career penalty (JD explicitly mentions bad fit)
 CONSULTING_FIRMS = {
     "tcs", "tata consultancy", "infosys", "wipro", "accenture",

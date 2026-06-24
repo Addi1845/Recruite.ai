@@ -47,10 +47,14 @@ def compute_career_score(candidate: dict) -> float:
     consulting_jobs = [c for c in all_companies if any(firm in c for firm in CONSULTING_FIRMS)]
     product_company_jobs = len(career) - len(consulting_jobs)
     
-    # Full career in consulting = major penalty (JD is explicit about this)
-    if len(consulting_jobs) == len(career):
-        score -= 0.35
-    elif product_company_jobs >= 2:
+    # Consulting jobs check: graduated penalty based on percentage
+    total_jobs = len(career)
+    if total_jobs > 0:
+        consulting_ratio = len(consulting_jobs) / total_jobs
+        if consulting_ratio > 0:
+            score -= 0.35 * consulting_ratio
+    
+    if product_company_jobs >= 2:
         score += 0.10
     
     # ── Per-role analysis ────────────────────────────────────────────────────
@@ -97,7 +101,6 @@ def compute_career_score(candidate: dict) -> float:
         hv_hits = sum(1 for sig in hv_signals if sig in desc)
         score += min(0.12, hv_hits * 0.015)
     
-    # Bonuses and penalties
     if has_production_ml:
         score += 0.15
     
@@ -106,6 +109,11 @@ def compute_career_score(candidate: dict) -> float:
     
     if has_relevant_title:
         score += 0.10
+        
+    # ── Leadership check ─────────────────────────────────────────────────────
+    leadership_keywords = ["led team", "managed", "mentored", "tech lead", "architect", "staff engineer"]
+    leadership_hits = sum(1 for job in career if any(kw in str(job.get("description", "")).lower() for kw in leadership_keywords))
+    score += min(0.06, leadership_hits * 0.03)
     
     # ── Title trajectory check ───────────────────────────────────────────────
     # Red flag: title_chaser (short stints at multiple companies for title bumps)

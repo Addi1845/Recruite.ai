@@ -111,9 +111,9 @@ def score_candidate(candidate: dict) -> tuple[float, dict]:
     salary = compute_salary_fit(candidate)
     
     # ── Weighted combination (v2 optimized) ──────────────────────────────────
-    # Education and assessment are already pre-scaled (max 0.03 and 0.05)
-    education_scaled = min(0.03, education * 0.6)  # compress from max 0.05 to 0.03
-    assessment_scaled = min(0.05, assessment_bonus * 0.625)  # compress from max 0.08 to 0.05
+    # Education and assessment are already pre-scaled (max 0.05 and 0.08 respectively)
+    education_scaled = min(0.05, education)
+    assessment_scaled = min(0.08, assessment_bonus)
     
     raw = (
         skills         * 0.28 +

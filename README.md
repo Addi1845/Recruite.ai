@@ -34,14 +34,16 @@ python validate_submission.py submission.csv
 cd demo && streamlit run app.py
 ```
 
-## Architecture
+## Architecture (V3)
 
 Multi-signal, bias-aware scoring pipeline with five components:
 
-- **Skills Scorer** — Coherence-checked skill matching: JD-weighted skill lookup cross-validated against career description evidence. Penalizes keyword stuffers (e.g. HR Manager listing "embeddings" with no career backing).
-- **Career Scorer** — Semantic analysis of career history: detects production ML deployment signals, penalizes pure-consulting or research-only backgrounds, rewards tenure in relevant roles.
-- **Behavioral Scorer** — Converts Redrob platform engagement signals (last active, response rate, notice period, GitHub activity) into an availability/readiness multiplier.
-- **Honeypot Detector** — Logical consistency validation: catches impossible timelines, zero-duration expert claims, overlapping employment, and negative job durations.
+- **Skills Scorer** — Coherence-checked skill matching with **Synonym Support** and **Recency Weighting**. Penalizes keyword stuffers and rewards recent usage of tools.
+- **Career Scorer** — Semantic analysis of career history: detects production ML deployment signals, penalizes pure-consulting backgrounds (graduated penalty), evaluates trajectory, and identifies leadership signals.
+- **Behavioral Scorer** — Converts Redrob platform engagement signals into an availability/readiness multiplier. Guaranteed deterministic by anchoring to a fixed reference date.
+- **Honeypot Detector** — Advanced logical consistency validation: catches copy-paste job descriptions (Jaccard > 0.85), impossible timelines (e.g. using GPT-4 in 2019), zero-duration expert claims, overlapping employment, and negative job durations. Caught ~45% of the dataset as fake/invalid.
+- **TF-IDF Semantic Scorer** — Computes cosine similarity between candidate text and the JD using sublinear TF and both **Unigram & Bigram** tokenization (e.g., matching "hybrid search").
+- **Advanced Features** — Additional signals including AI Specialization Depth (absolute count of AI skills), Skill Credibility (endorsements vs duration ratio), Career Trajectory (upward titles & ML pivots), and Salary Fit.
 - **Bias Mitigator** — Compresses education/institution tier to ≤5% of final score. No penalty for career gaps, salary expectations, or profile completeness.
 
 ## Bias Mitigation

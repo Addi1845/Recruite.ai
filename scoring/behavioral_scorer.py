@@ -16,7 +16,8 @@ def compute_behavioral_score(candidate: dict) -> float:
     # ── Recency: When did they last engage? (MOST IMPORTANT signal) ──────────
     try:
         last_active = datetime.strptime(signals["last_active_date"], "%Y-%m-%d")
-        days_inactive = (datetime.now() - last_active).days
+        REFERENCE_DATE = datetime(2025, 6, 1)
+        days_inactive = (REFERENCE_DATE - last_active).days
         
         if days_inactive <= 7:
             score += 0.30
