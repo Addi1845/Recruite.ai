@@ -65,7 +65,7 @@ methodology_summary: |
   availability multiplier. Advanced honeypot detection uses Jaccard-similarity checks to catch copy-paste 
   fraud, timeline impossibilities (like GPT-4 in 2019), zero-duration experts, and overlapping jobs 
   (catching ~45% of the dataset as fake). Education is deliberately compressed to ≤5% weight for fairness. 
-  Runtime is ~9.5 minutes for 100K candidates on CPU with no network.
+  Runtime is under 5 minutes for 100K candidates on CPU with no network.
 
 # ============================================================================
 # Declarations

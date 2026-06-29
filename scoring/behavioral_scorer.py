@@ -1,6 +1,21 @@
 # scoring/behavioral_scorer.py
 from datetime import datetime
+from functools import lru_cache
 from scoring.jd_config import PREFERRED_CITIES
+
+# Fixed reference date — deterministic, no datetime.now() drift
+_REFERENCE_DATE = datetime(2025, 6, 1)
+
+
+@lru_cache(maxsize=4096)
+def _days_inactive_cached(last_active_str: str) -> int:
+    """Parse and compute days inactive — cached since dates repeat across candidates."""
+    try:
+        last_active = datetime.strptime(last_active_str, "%Y-%m-%d")
+        return (_REFERENCE_DATE - last_active).days
+    except (ValueError, TypeError):
+        return 999  # treat as very inactive on parse failure
+
 
 def compute_behavioral_score(candidate: dict) -> float:
     """
@@ -14,25 +29,24 @@ def compute_behavioral_score(candidate: dict) -> float:
     score = 0.5  # neutral baseline
     
     # ── Recency: When did they last engage? (MOST IMPORTANT signal) ──────────
-    try:
-        last_active = datetime.strptime(signals["last_active_date"], "%Y-%m-%d")
-        REFERENCE_DATE = datetime(2025, 6, 1)
-        days_inactive = (REFERENCE_DATE - last_active).days
-        
-        if days_inactive <= 7:
-            score += 0.30
-        elif days_inactive <= 30:
-            score += 0.20
-        elif days_inactive <= 60:
-            score += 0.10
-        elif days_inactive <= 90:
-            score += 0.0
-        elif days_inactive <= 180:
-            score -= 0.15
-        else:
-            score -= 0.30  # >6 months inactive: major red flag
-    except (KeyError, ValueError):
-        score -= 0.05
+    last_active_str = signals.get("last_active_date", "")
+    if last_active_str:
+        days_inactive = _days_inactive_cached(last_active_str)
+    else:
+        days_inactive = 999
+
+    if days_inactive <= 7:
+        score += 0.30
+    elif days_inactive <= 30:
+        score += 0.20
+    elif days_inactive <= 60:
+        score += 0.10
+    elif days_inactive <= 90:
+        score += 0.0
+    elif days_inactive <= 180:
+        score -= 0.15
+    else:
+        score -= 0.30  # >6 months inactive: major red flag
     
     # ── Open to work flag ─────────────────────────────────────────────────────
     if signals.get("open_to_work_flag", False):

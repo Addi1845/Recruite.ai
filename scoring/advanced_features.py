@@ -7,6 +7,7 @@ Pure Python — no sklearn, no network calls, no external APIs.
 """
 
 from datetime import datetime
+from functools import lru_cache
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
@@ -229,8 +230,9 @@ def _is_ml_role(title: str, description: str = "") -> bool:
     return any(kw in text for kw in _ML_ROLE_KEYWORDS)
 
 
+@lru_cache(maxsize=4096)
 def _parse_date_safe(date_str: str) -> datetime | None:
-    """Parse YYYY-MM-DD date, returning None on failure."""
+    """Parse YYYY-MM-DD date, returning None on failure. Cached for speed."""
     try:
         return datetime.strptime(date_str, "%Y-%m-%d")
     except (ValueError, TypeError):

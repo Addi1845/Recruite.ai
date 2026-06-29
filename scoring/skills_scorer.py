@@ -1,20 +1,26 @@
 # scoring/skills_scorer.py
 import re
 from datetime import datetime
+from functools import lru_cache
 from scoring.jd_config import (
     CORE_SKILLS, MAX_SKILLS_SCORE, BAD_TITLE_PATTERNS,
     BAD_TITLE_EXACT_WORDS, EXACT_MATCH_SKILLS, SKILL_SYNONYMS
 )
 
 
-def _word_boundary_match(needle: str, haystack: str) -> bool:
-    """Check if needle appears as a whole word/phrase in haystack.
+@lru_cache(maxsize=512)
+def _compile_boundary_pattern(needle: str):
+    """Pre-compile and cache word-boundary regex for each unique needle.
     
-    Prevents 'ml' from matching 'html' or 'xml',
-    and 'map' from matching 'roadmap' or 'bitmap'.
+    Without caching, this regex is compiled fresh for EVERY skill × EVERY candidate.
+    With caching: compiled once per unique needle string (~30 patterns total).
     """
-    pattern = r'(?<![a-zA-Z0-9])' + re.escape(needle) + r'(?![a-zA-Z0-9])'
-    return bool(re.search(pattern, haystack))
+    return re.compile(r'(?<![a-zA-Z0-9])' + re.escape(needle) + r'(?![a-zA-Z0-9])')
+
+
+def _word_boundary_match(needle: str, haystack: str) -> bool:
+    """Check if needle appears as a whole word/phrase in haystack."""
+    return bool(_compile_boundary_pattern(needle).search(haystack))
 
 
 def _is_bad_title(title_lower: str) -> bool:

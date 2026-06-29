@@ -86,15 +86,12 @@ _SPLIT_RE = re.compile(r"[^a-z0-9]+")
 # ═══════════════════════════════════════════════════════════════════════════════
 
 def _tokenise(text: str) -> List[str]:
-    """Lowercase → split on non-alnum → drop stopwords & 1-char tokens.
-    Also generates adjacent bigrams after stopword removal."""
-    unigrams = [
+    """Lowercase → split on non-alnum → drop stopwords & 1-char tokens."""
+    return [
         tok
         for tok in _SPLIT_RE.split(text.lower())
         if tok and len(tok) > 1 and tok not in _STOPWORDS
     ]
-    bigrams = [f"{unigrams[i]}_{unigrams[i+1]}" for i in range(len(unigrams) - 1)]
-    return unigrams + bigrams
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -145,15 +142,12 @@ def _tfidf_vector(
     """Return a sparse TF-IDF vector (term → weight) with sublinear TF.
 
     Sublinear TF:  tf = 1 + log(raw_count)  if raw_count > 0, else 0.
-    Bigrams (containing '_') are weighted by 0.7x.
     """
     tf_raw = Counter(tokens)
     vec: Dict[str, float] = {}
     for term, count in tf_raw.items():
         if term in idf:
             tf = 1.0 + math.log(count) if count > 0 else 0.0
-            if "_" in term:
-                tf *= 0.7
             vec[term] = tf * idf[term]
     return vec
 
@@ -260,6 +254,10 @@ def compute_tfidf_score(candidate: dict) -> float:
     tokens = _tokenise(text)
     if not tokens:
         return 0.0
+
+    # Cap at 800 tokens for speed
+    if len(tokens) > 800:
+        tokens = tokens[:800]
 
     candidate_vec = _tfidf_vector(tokens, _JD_IDF)
     return _cosine_similarity(_JD_VEC, candidate_vec)

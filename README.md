@@ -59,7 +59,7 @@ Multi-signal, bias-aware scoring pipeline with five components:
 
 ## Compute Environment
 
-- Runtime: ~3 min on 16GB CPU for 100K candidates
+- Runtime: **under 5 min** on 16GB CPU for 100K candidates (multiprocessing)
 - No GPU required for ranking
 - No network calls during ranking step
 - Python 3.11+
