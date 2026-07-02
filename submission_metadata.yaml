@@ -4,24 +4,19 @@
 # ============================================================================
 # Team identity
 # ============================================================================
-team_name: "YOUR_TEAM_NAME"
+team_name: "Team Insforge"
 
 primary_contact:
-  name: "Your Full Name"
-  email: "your_email@example.com"
-  phone: "+91-XXXXXXXXXX"
+  name: "Aditya N Patil"
+  email: "patil.addi1845@gmail.com"
+  phone: "+91-7385675720"
 
-team_members:
-  - name: "Your Full Name"
-    email: "your_email@example.com"
-    role: "ML Engineer"
+team_members: []
 
 # ============================================================================
 # Code and reproducibility
 # ============================================================================
-github_repo: "https://github.com/YOUR_USERNAME/redrob-ranker"
-
-sandbox_link: "https://your-sandbox-url.streamlit.app"
+github_repo: "https://github.com/Addi1845/Recruite.ai"
 
 reproduce_command: "python rank.py --candidates ./candidates.jsonl --out ./submission.csv"
 
